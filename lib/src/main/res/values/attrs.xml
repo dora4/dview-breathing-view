@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<resources>
+
+    <declare-styleable name="DoraBreathingView">
+        <!-- 显示文字 -->
+        <attr name="dview_bv_text" format="string|reference" />
+        <!-- 文字颜色 -->
+        <attr name="dview_bv_textColor" format="color|reference" />
+        <!-- 文字大小 -->
+        <attr name="dview_bv_textSize" format="dimension|reference" />
+        <!-- 闪烁次数 -->
+        <attr name="dview_bv_blinkCount" format="integer" />
+        <!-- 单次亮/暗时间 -->
+        <attr name="dview_bv_blinkDuration" format="integer" />
+        <!-- 水平内边距 -->
+        <attr name="dview_bv_horizontalPadding" format="dimension|reference" />
+        <!-- 垂直内边距 -->
+        <attr name="dview_bv_verticalPadding" format="dimension|reference" />
+    </declare-styleable>
+</resources>
