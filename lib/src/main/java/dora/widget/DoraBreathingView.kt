@@ -79,46 +79,27 @@ class DoraBreathingView @JvmOverloads constructor(
     /**
      * 显示文字。
      */
-    var text: String = ""
-        set(value) {
-            field = value
-            requestLayout()
-            invalidate()
-        }
+    private var text: String = ""
 
     /**
      * 文字颜色。
      */
     @ColorInt
-    var textColor: Int = 0xFFFFFFFF.toInt()
-        set(value) {
-            field = value
-            paint.color = value
-            invalidate()
-        }
+    private var textColor: Int = 0xFFFFFFFF.toInt()
 
     /**
      * 文字大小。
      *
      * 单位：sp。
      */
-    var textSizeSp: Float = DEFAULT_TEXT_SIZE
-        set(value) {
-            field = value.coerceAtLeast(0f)
-            paint.textSize = sp(field)
-            requestLayout()
-            invalidate()
-        }
+    private var textSizeSp: Float = DEFAULT_TEXT_SIZE
 
     /**
      * 默认闪烁次数。
      *
      * blink() 会使用此值。
      */
-    var blinkCount: Int = DEFAULT_BLINK_COUNT
-        set(value) {
-            field = value.coerceAtLeast(1)
-        }
+    private var blinkCount: Int = DEFAULT_BLINK_COUNT
 
     /**
      * 单次亮/暗的持续时间。
@@ -127,10 +108,7 @@ class DoraBreathingView @JvmOverloads constructor(
      *
      * 亮 -> 200ms -> 暗 -> 200ms -> 亮
      */
-    var blinkDuration: Long = DEFAULT_BLINK_DURATION
-        set(value) {
-            field = value.coerceAtLeast(50L)
-        }
+    private var blinkDuration: Long = DEFAULT_BLINK_DURATION
 
     /**
      * 水平内边距。
@@ -281,6 +259,7 @@ class DoraBreathingView @JvmOverloads constructor(
      */
     fun setText(text: String) {
         this.text = text
+        invalidate()
     }
 
     /**
@@ -342,10 +321,12 @@ class DoraBreathingView @JvmOverloads constructor(
     /**
      * 设置文字颜色。
      */
-    fun setTextColorInt(
+    fun setTextColor(
         @ColorInt color: Int
     ) {
         textColor = color
+        paint.color = color
+        invalidate()
     }
 
     /**
@@ -354,7 +335,10 @@ class DoraBreathingView @JvmOverloads constructor(
      * 单位：sp。
      */
     fun setTextSizeSp(size: Float) {
-        textSizeSp = size
+        textSizeSp = sp(size.coerceAtLeast(0f))
+        paint.textSize = textSizeSp
+        requestLayout()
+        invalidate()
     }
 
     /**
@@ -370,14 +354,14 @@ class DoraBreathingView @JvmOverloads constructor(
      * 设置闪烁次数。
      */
     fun setBlinkCount(count: Int) {
-        blinkCount = count
+        blinkCount = count.coerceAtLeast(1)
     }
 
     /**
      * 设置闪烁速度。
      */
     fun setBlinkDuration(duration: Long) {
-        blinkDuration = duration
+        blinkDuration = duration.coerceAtLeast(50L)
     }
 
     /**
