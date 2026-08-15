@@ -15,3 +15,21 @@ dependencies {
     implementation 'com.github.dora4:dview-breathing-view:1.2'
 }
 ```
+
+#### 控件使用
+
+```xml
+<dora.widget.DoraBreathingView
+    android:id="@+id/breathingView"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    app:dview_bv_text="PUSH START"
+    app:dview_bv_textSize="12sp"
+    app:dview_bv_blinkDuration="1000"/>
+```
+
+```kotlin
+val breathingView = headerView.findViewById<DoraBreathingView>(R.id.breathingView)
+breathingView.blink(10)
+```
+
