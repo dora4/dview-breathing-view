@@ -51,7 +51,7 @@ class DoraBreathingView @JvmOverloads constructor(
     companion object {
 
         /**
-         * 默认文字大小。
+         * 默认文字大小，单位：sp。
          */
         private const val DEFAULT_TEXT_SIZE = 16f
 
@@ -61,17 +61,17 @@ class DoraBreathingView @JvmOverloads constructor(
         private const val DEFAULT_BLINK_COUNT = 3
 
         /**
-         * 默认单次亮/暗时间。
+         * 默认单次亮/暗时间，单位：ms。
          */
         private const val DEFAULT_BLINK_DURATION = 200L
 
         /**
-         * 默认左右内边距。
+         * 默认左右内边距，单位：dp。
          */
         private const val DEFAULT_HORIZONTAL_PADDING = 4f
 
         /**
-         * 默认上下内边距。
+         * 默认上下内边距，单位：dp。
          */
         private const val DEFAULT_VERTICAL_PADDING = 2f
     }
@@ -90,30 +90,26 @@ class DoraBreathingView @JvmOverloads constructor(
     /**
      * 文字大小。
      *
-     * 单位：sp。
+     * 保存的是 SP 数值，不是 PX。
      */
     private var textSizeSp: Float = DEFAULT_TEXT_SIZE
 
     /**
      * 默认闪烁次数。
-     *
-     * blink() 会使用此值。
      */
     private var blinkCount: Int = DEFAULT_BLINK_COUNT
 
     /**
      * 单次亮/暗的持续时间。
-     *
-     * 例如 200ms：
-     *
-     * 亮 -> 200ms -> 暗 -> 200ms -> 亮
      */
     private var blinkDuration: Long = DEFAULT_BLINK_DURATION
 
     /**
      * 水平内边距。
+     *
+     * 单位：px。
      */
-    var horizontalPadding: Float = DEFAULT_HORIZONTAL_PADDING
+    var horizontalPadding: Float = dp(DEFAULT_HORIZONTAL_PADDING)
         set(value) {
             field = value.coerceAtLeast(0f)
             requestLayout()
@@ -122,8 +118,10 @@ class DoraBreathingView @JvmOverloads constructor(
 
     /**
      * 垂直内边距。
+     *
+     * 单位：px。
      */
-    var verticalPadding: Float = DEFAULT_VERTICAL_PADDING
+    var verticalPadding: Float = dp(DEFAULT_VERTICAL_PADDING)
         set(value) {
             field = value.coerceAtLeast(0f)
             requestLayout()
@@ -155,48 +153,95 @@ class DoraBreathingView @JvmOverloads constructor(
      */
     var onBlinkEnd: (() -> Unit)? = null
 
+    /**
+     * Paint。
+     */
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.FILL
         textAlign = Paint.Align.CENTER
         typeface = Typeface.DEFAULT_BOLD
-        color = textColor
-        textSize = sp(DEFAULT_TEXT_SIZE)
     }
 
     init {
+        // 先设置默认 Paint 参数
+        paint.color = textColor
+        paint.textSize = sp(DEFAULT_TEXT_SIZE)
+
         context.obtainStyledAttributes(
             attrs,
             R.styleable.DoraBreathingView,
             defStyleAttr,
             0
         ).apply {
+
+            /**
+             * 文字。
+             */
             text = getString(
                 R.styleable.DoraBreathingView_dview_bv_text
             ).orEmpty()
+
+            /**
+             * 文字颜色。
+             */
             textColor = getColor(
                 R.styleable.DoraBreathingView_dview_bv_textColor,
                 textColor
             )
+
+            /**
+             * 文字大小。
+             *
+             * getDimension() 返回 px，
+             * 所以转换回 SP 保存。
+             */
             textSizeSp = getDimension(
                 R.styleable.DoraBreathingView_dview_bv_textSize,
                 sp(DEFAULT_TEXT_SIZE)
             ) / resources.displayMetrics.scaledDensity
+
+            /**
+             * 关键：
+             * XML 属性解析完成后，
+             * 必须同步更新 Paint。
+             */
+            paint.color = textColor
+            paint.textSize = sp(textSizeSp)
+
+            /**
+             * 闪烁次数。
+             */
             blinkCount = getInt(
                 R.styleable.DoraBreathingView_dview_bv_blinkCount,
                 DEFAULT_BLINK_COUNT
-            )
+            ).coerceAtLeast(1)
+
+            /**
+             * 闪烁时间。
+             */
             blinkDuration = getInt(
                 R.styleable.DoraBreathingView_dview_bv_blinkDuration,
                 DEFAULT_BLINK_DURATION.toInt()
-            ).toLong()
+            )
+                .toLong()
+                .coerceAtLeast(50L)
+
+            /**
+             * 水平内边距。
+             */
             horizontalPadding = getDimension(
                 R.styleable.DoraBreathingView_dview_bv_horizontalPadding,
                 dp(DEFAULT_HORIZONTAL_PADDING)
             )
+
+            /**
+             * 垂直内边距。
+             */
             verticalPadding = getDimension(
                 R.styleable.DoraBreathingView_dview_bv_verticalPadding,
                 dp(DEFAULT_VERTICAL_PADDING)
             )
+
             recycle()
         }
     }
@@ -206,18 +251,33 @@ class DoraBreathingView @JvmOverloads constructor(
         heightMeasureSpec: Int
     ) {
         val fontMetrics = paint.fontMetrics
-        val textWidth = paint.measureText(text)
+
+        val textWidth = if (text.isEmpty()) {
+            0f
+        } else {
+            paint.measureText(text)
+        }
+
         val textHeight = fontMetrics.bottom - fontMetrics.top
-        val desiredWidth = (textWidth + horizontalPadding * 2).toInt()
-        val desiredHeight = (textHeight + verticalPadding * 2).toInt()
+
+        val desiredWidth = (
+            textWidth + horizontalPadding * 2
+        ).toInt()
+
+        val desiredHeight = (
+            textHeight + verticalPadding * 2
+        ).toInt()
+
         val width = resolveSize(
             desiredWidth,
             widthMeasureSpec
         )
+
         val height = resolveSize(
             desiredHeight,
             heightMeasureSpec
         )
+
         setMeasuredDimension(
             width,
             height
@@ -226,24 +286,37 @@ class DoraBreathingView @JvmOverloads constructor(
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
+
         if (text.isEmpty()) {
             return
         }
+
         val fontMetrics = paint.fontMetrics
+
         val x = width / 2f
+
         /**
          * 让文字在 View 中垂直居中。
          */
-        val y = height / 2f - (fontMetrics.ascent + fontMetrics.descent) / 2f
-        paint.alpha = (currentAlpha * 255f)
-                .toInt()
-                .coerceIn(0, 255)
+        val y = height / 2f -
+                (fontMetrics.ascent + fontMetrics.descent) / 2f
+
+        /**
+         * 根据当前动画透明度绘制。
+         */
+        paint.alpha = (
+            currentAlpha * 255f
+        )
+            .toInt()
+            .coerceIn(0, 255)
+
         canvas.drawText(
             text,
             x,
             y,
             paint
         )
+
         /**
          * 避免 alpha 状态影响下一次绘制。
          */
@@ -259,7 +332,15 @@ class DoraBreathingView @JvmOverloads constructor(
      */
     fun setText(text: String) {
         this.text = text
+        requestLayout()
         invalidate()
+    }
+
+    /**
+     * 获取当前文字。
+     */
+    fun getText(): String {
+        return text
     }
 
     /**
@@ -274,7 +355,7 @@ class DoraBreathingView @JvmOverloads constructor(
      * 10
      */
     fun setValue(value: Int) {
-        text = value.toString()
+        setText(value.toString())
     }
 
     /**
@@ -292,7 +373,7 @@ class DoraBreathingView @JvmOverloads constructor(
         value: Int,
         prefix: String
     ) {
-        text = "$prefix$value"
+        setText("$prefix$value")
     }
 
     /**
@@ -315,7 +396,7 @@ class DoraBreathingView @JvmOverloads constructor(
         prefix: String = "",
         suffix: String = ""
     ) {
-        text = "$prefix$value$suffix"
+        setText("$prefix$value$suffix")
     }
 
     /**
@@ -330,15 +411,38 @@ class DoraBreathingView @JvmOverloads constructor(
     }
 
     /**
+     * 获取文字颜色。
+     */
+    @ColorInt
+    fun getTextColor(): Int {
+        return textColor
+    }
+
+    /**
      * 设置文字大小。
      *
      * 单位：sp。
      */
     fun setTextSizeSp(size: Float) {
-        textSizeSp = sp(size.coerceAtLeast(0f))
-        paint.textSize = textSizeSp
+        textSizeSp = size.coerceAtLeast(0f)
+
+        /**
+         * Paint 使用 px，
+         * 所以这里需要 SP -> PX。
+         */
+        paint.textSize = sp(textSizeSp)
+
         requestLayout()
         invalidate()
+    }
+
+    /**
+     * 获取文字大小。
+     *
+     * 单位：sp。
+     */
+    fun getTextSizeSp(): Float {
+        return textSizeSp
     }
 
     /**
@@ -346,6 +450,7 @@ class DoraBreathingView @JvmOverloads constructor(
      */
     fun setTypeface(typeface: Typeface?) {
         paint.typeface = typeface ?: Typeface.DEFAULT
+
         requestLayout()
         invalidate()
     }
@@ -358,10 +463,26 @@ class DoraBreathingView @JvmOverloads constructor(
     }
 
     /**
+     * 获取闪烁次数。
+     */
+    fun getBlinkCount(): Int {
+        return blinkCount
+    }
+
+    /**
      * 设置闪烁速度。
+     *
+     * 单位：ms。
      */
     fun setBlinkDuration(duration: Long) {
         blinkDuration = duration.coerceAtLeast(50L)
+    }
+
+    /**
+     * 获取闪烁速度。
+     */
+    fun getBlinkDuration(): Long {
+        return blinkDuration
     }
 
     /**
@@ -372,6 +493,8 @@ class DoraBreathingView @JvmOverloads constructor(
      * 亮 -> 暗 -> 亮
      *
      * 共 3 次。
+     *
+     * 完成后自动隐藏。
      */
     fun blink() {
         blink(blinkCount)
@@ -383,31 +506,42 @@ class DoraBreathingView @JvmOverloads constructor(
      * 例如：
      *
      * blink(5)
+     *
+     * 完成后自动隐藏。
      */
     fun blink(count: Int) {
         if (count <= 0) {
             return
         }
+
         /**
          * 如果当前正在执行动画，
          * 先取消当前动画。
          */
         animator?.cancel()
+
+        /**
+         * 开始时重新显示。
+         */
         blinking = true
         currentAlpha = 1f
         invalidate()
+
         onBlinkStart?.invoke()
+
         animator = ValueAnimator.ofFloat(
             1f,
             0f,
             1f
         ).apply {
+
             /**
              * 一次完整循环：
              *
              * 亮 -> 暗 -> 亮
              */
             duration = blinkDuration * 2
+
             /**
              * count = 3：
              *
@@ -416,52 +550,114 @@ class DoraBreathingView @JvmOverloads constructor(
              * 第 3 次：亮 -> 暗 -> 亮
              */
             repeatCount = count - 1
+
             interpolator = AccelerateDecelerateInterpolator()
+
             addUpdateListener {
                 currentAlpha = it.animatedValue as Float
                 invalidate()
             }
+
             addListener(
                 object : AnimatorListenerAdapter() {
 
+                    /**
+                     * 动画正常结束。
+                     */
                     override fun onAnimationEnd(
                         animation: Animator
                     ) {
                         if (animation != animator) {
                             return
                         }
+
                         animator = null
                         blinking = false
-                        currentAlpha = 1f
+
+                        /**
+                         * 最终隐藏。
+                         */
+                        currentAlpha = 0f
+
                         invalidate()
+
                         onBlinkEnd?.invoke()
                     }
 
+                    /**
+                     * 动画被取消。
+                     *
+                     * 取消不是正常完成，
+                     * 所以恢复显示。
+                     */
                     override fun onAnimationCancel(
                         animation: Animator
                     ) {
                         if (animation != animator) {
                             return
                         }
+
                         animator = null
                         blinking = false
+
+                        /**
+                         * 取消动画时恢复显示。
+                         */
                         currentAlpha = 1f
+
                         invalidate()
                     }
                 }
             )
+
             start()
         }
     }
 
     /**
      * 停止当前闪烁。
+     *
+     * 停止后恢复显示。
      */
     fun stopBlink() {
         animator?.cancel()
+
         animator = null
         blinking = false
+
+        /**
+         * 手动停止后保持显示。
+         */
         currentAlpha = 1f
+
+        invalidate()
+    }
+
+    /**
+     * 立即隐藏。
+     */
+    fun hide() {
+        animator?.cancel()
+
+        animator = null
+        blinking = false
+
+        currentAlpha = 0f
+
+        invalidate()
+    }
+
+    /**
+     * 立即显示。
+     */
+    fun show() {
+        animator?.cancel()
+
+        animator = null
+        blinking = false
+
+        currentAlpha = 1f
+
         invalidate()
     }
 
@@ -472,15 +668,36 @@ class DoraBreathingView @JvmOverloads constructor(
         return blinking
     }
 
+    /**
+     * 当前是否可见。
+     *
+     * 注意：
+     * 这里判断的是控件内部文字透明度，
+     * 不是 View.visibility。
+     */
+    fun isShownByAlpha(): Boolean {
+        return currentAlpha > 0f
+    }
+
     override fun onDetachedFromWindow() {
         stopBlink()
         super.onDetachedFromWindow()
     }
 
+    /**
+     * dp -> px。
+     */
     private fun dp(value: Float): Float {
-        return value * resources.displayMetrics.density
+        return TypedValue.applyDimension(
+            TypedValue.COMPLEX_UNIT_DIP,
+            value,
+            resources.displayMetrics
+        )
     }
 
+    /**
+     * sp -> px。
+     */
     private fun sp(value: Float): Float {
         return TypedValue.applyDimension(
             TypedValue.COMPLEX_UNIT_SP,
